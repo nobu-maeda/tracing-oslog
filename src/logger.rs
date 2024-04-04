@@ -9,6 +9,7 @@ use crate::{
 	},
 	visitor::{AttributeMap, FieldVisitor},
 };
+use chrono::prelude::*;
 use fnv::FnvHashMap;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -131,20 +132,35 @@ where
 		let mut attr_visitor = FieldVisitor::new(&mut attributes);
 		event.record(&mut attr_visitor);
 		let mut message = String::new();
+
+		// Timestamp
+		let utc = Utc::now();
+		message.push_str(&utc.to_string());
+		message.push_str("  ");
+
+		// Level
+		message.push_str(&metadata.level().as_str());
+		message.push_str("  ");
+
+		// Message
 		if let Some(value) = attributes.remove(&"message".to_string()) {
-			message = value;
+			message.push_str(&value);
 			message.push_str("  ");
 		}
+
 		message.push_str(
 			&attributes
 				.into_iter()
 				.map(|(k, v)| format!("{}={}", k, v))
 				.collect::<Vec<_>>()
-				.join(" "),
+				.join("  "),
 		);
+
 		message.retain(|c| c != '\0');
+
 		let message =
 			CString::new(message).expect("failed to convert formatted message to a C string");
+
 		if let Some(parent_id) = ctx.current_span().id() {
 			let span = ctx
 				.span(parent_id)
