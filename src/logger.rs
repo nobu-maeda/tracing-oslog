@@ -142,6 +142,10 @@ where
 		message.push_str(&metadata.level().as_str());
 		message.push_str("  ");
 
+		// Target
+		message.push_str(&metadata.target());
+		message.push_str("  ");
+
 		// Message
 		if let Some(value) = attributes.remove(&"message".to_string()) {
 			message.push_str(&value);
