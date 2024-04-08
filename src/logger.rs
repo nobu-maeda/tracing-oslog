@@ -122,8 +122,8 @@ where
 	fn on_event(&self, event: &Event, ctx: Context<S>) {
 		let metadata = event.metadata();
 		let level = match *metadata.level() {
-			Level::TRACE => os_log_type_t_OS_LOG_TYPE_DEBUG,
-			Level::DEBUG => os_log_type_t_OS_LOG_TYPE_DEBUG,
+			Level::TRACE => os_log_type_t_OS_LOG_TYPE_INFO,
+			Level::DEBUG => os_log_type_t_OS_LOG_TYPE_INFO,
 			Level::INFO => os_log_type_t_OS_LOG_TYPE_INFO,
 			Level::WARN => os_log_type_t_OS_LOG_TYPE_ERROR,
 			Level::ERROR => os_log_type_t_OS_LOG_TYPE_ERROR,
