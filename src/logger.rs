@@ -4,8 +4,8 @@ use crate::{
 		os_activity_flag_t_OS_ACTIVITY_FLAG_DEFAULT, os_activity_scope_enter,
 		os_activity_scope_leave, os_activity_scope_state_s, os_activity_scope_state_t,
 		os_activity_t, os_log_create, os_log_t, os_log_type_t_OS_LOG_TYPE_DEBUG,
-		os_log_type_t_OS_LOG_TYPE_ERROR, os_log_type_t_OS_LOG_TYPE_INFO, os_release,
-		wrapped_os_log_with_type,
+		os_log_type_t_OS_LOG_TYPE_DEFAULT, os_log_type_t_OS_LOG_TYPE_ERROR,
+		os_log_type_t_OS_LOG_TYPE_INFO, os_release, wrapped_os_log_with_type,
 	},
 	visitor::{AttributeMap, FieldVisitor},
 };
@@ -46,6 +46,8 @@ impl Drop for Activity {
 
 pub struct OsLogger {
 	logger: os_log_t,
+	log_timestamp_enabled: bool,
+	log_level_enabled: bool,
 }
 
 impl OsLogger {
@@ -65,7 +67,21 @@ impl OsLogger {
 		let category = CString::new(category.as_ref())
 			.expect("failed to construct C string from category name");
 		let logger = unsafe { os_log_create(subsystem.as_ptr(), category.as_ptr()) };
-		Self { logger }
+		Self {
+			logger,
+			log_timestamp_enabled: true,
+			log_level_enabled: true,
+		}
+	}
+
+	pub fn log_timestamp(mut self, enable: bool) -> Self {
+		self.log_timestamp_enabled = enable;
+		self
+	}
+
+	pub fn log_level(mut self, enable: bool) -> Self {
+		self.log_level_enabled = enable;
+		self
 	}
 }
 
@@ -122,9 +138,9 @@ where
 	fn on_event(&self, event: &Event, ctx: Context<S>) {
 		let metadata = event.metadata();
 		let level = match *metadata.level() {
-			Level::TRACE => os_log_type_t_OS_LOG_TYPE_INFO,
+			Level::TRACE => os_log_type_t_OS_LOG_TYPE_DEBUG,
 			Level::DEBUG => os_log_type_t_OS_LOG_TYPE_INFO,
-			Level::INFO => os_log_type_t_OS_LOG_TYPE_INFO,
+			Level::INFO => os_log_type_t_OS_LOG_TYPE_DEFAULT,
 			Level::WARN => os_log_type_t_OS_LOG_TYPE_ERROR,
 			Level::ERROR => os_log_type_t_OS_LOG_TYPE_ERROR,
 		};
@@ -134,13 +150,17 @@ where
 		let mut message = String::new();
 
 		// Timestamp
-		let utc = Utc::now();
-		message.push_str(&utc.to_string());
-		message.push_str("  ");
+		if self.log_timestamp_enabled {
+			let utc = Utc::now();
+			message.push_str(&utc.to_string());
+			message.push_str("  ");
+		}
 
 		// Level
-		message.push_str(&metadata.level().as_str());
-		message.push_str("  ");
+		if self.log_level_enabled {
+			message.push_str(&metadata.level().as_str());
+			message.push_str("  ");
+		}
 
 		// Target
 		message.push_str(&metadata.target());
